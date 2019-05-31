@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import print_function
 import subprocess
 import pickle
@@ -18,20 +20,20 @@ TIME_DUNSTIFY_VISIBLE=30000
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/tasks.readonly']
-
+REL_PATH = os.path.abspath(os.path.dirname(__file__)) + '/'
+# Path needs to be relative otherwise i3bar cannot find the file
 # Generated during authentatication
-PICKLE_PATH = 'token.pickle'
+PICKLE_PATH = REL_PATH + 'token.pickle'
 # File generated form Source: ...
-CREDS_PATH = 'credentials.json'
+CREDS_PATH = REL_PATH + 'credentials.json'
 # File where recent data are stored 
-PATH = 'GoogleTaskI3BarData.json'
+PATH = REL_PATH + 'GoogleTaskI3BarData.json'
 
 WIDE_WS = u"\u2000"
 POINT_CHAR = u"\u2020"
 
 
 def main():
-
     # detect click from I3Bar
     blockButton = str(os.environ.get('BLOCK_BUTTON'))
  
@@ -73,11 +75,16 @@ def main():
 
     except Exception:
         # load data from file
-        with open(PATH, 'r') as inFile:
-            data = json.load(inFile)
-            tasks = data.get('tasks')
-            tasksWithDate = data.get('tasksWithDate')
-            subtasks = data.get('subtasks')
+        
+        if os.path.exists(PATH):
+            with open(PATH, 'r') as inFile:
+                data = json.load(inFile)
+                tasks = data.get('tasks')
+                tasksWithDate = data.get('tasksWithDate')
+                subtasks = data.get('subtasks')
+        else:
+            print("No connection")
+            exit()
 
     if (tasksWithDate != []): 
         I3BarPrint(tasksWithDate[0])    
