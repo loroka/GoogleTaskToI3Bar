@@ -30,7 +30,7 @@ CREDS_PATH = REL_PATH + 'credentials.json'
 PATH = REL_PATH + 'GoogleTaskI3BarData.json'
 
 WIDE_WS = u"\u2000"
-POINT_CHAR = u"\u2020"
+POINT_CHAR = u"\u25b6"
 
 
 def main():
@@ -135,18 +135,18 @@ def TimeLeft(dueDate, offset = False):
 
 def I3BarPrint(task):
     date = datetime.strptime(task['due'], '%Y-%m-%dT%H:%M:%S.000Z').strftime('%d. %b')
-    print("{0} | {1} | {2}".format(date,  task['title'], TimeLeft(task['due'])))
+    print("{0}  |  {1}  |  {2}".format(date,  task['title'], TimeLeft(task['due'])))
 def DunstifyPrint(tasks, tasksWithDate, subtasks):
     output = StringIO()
     with writer(output, ['', '', '']) as w:
         w.writeheader((' ', ' ', ' ')) # dynamic mode not working without this
         for taskWithDate in tasksWithDate:
-            w.writerow((WIDE_WS * 3 + "<b>" + TimeLeft(taskWithDate['due'], True) + "</b>",
-                        "<b>" + taskWithDate['title'] + "</b>", 
+            w.writerow((WIDE_WS * 2 + "<b>" + TimeLeft(taskWithDate['due'], True) + "</b>",
+                        "|" + WIDE_WS * 2 + "<b>" + taskWithDate['title'] + "</b>", 
                         WIDE_WS * 3))
         for task in tasks:
             if not (task in tasksWithDate):
-                w.writerow(('', WIDE_WS * 2 + "<b>" + task['title'] + "</b>", WIDE_WS * 3))
+                w.writerow(('', WIDE_WS * 5 + "<b>" + task['title'] + "</b>", WIDE_WS * 3))
             for subtask in subtasks:
                 if (task['id'] == subtask['parent']):
                     w.writerow(('', 
