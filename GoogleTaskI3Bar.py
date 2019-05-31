@@ -88,8 +88,10 @@ def main():
 
     if (tasksWithDate != []): 
         I3BarPrint(tasksWithDate[0])    
-    else:
+    elif (tasks != []):
         I3BarPrint(tasks[0])
+    else:
+        print("No tasks")
 
     if (blockButton == LEFT_MOUSE):
         DunstifyPrint(tasks, tasksWithDate, subtasks)
