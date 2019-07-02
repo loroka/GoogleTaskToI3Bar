@@ -5,6 +5,7 @@ import subprocess
 import pickle
 import os.path
 import json
+import sys
 from io import StringIO
 from texttables import Dialect
 from texttables.dynamic import writer
@@ -36,11 +37,29 @@ POINT_CHAR = u"\u25b6"
 def main():
     # detect click from I3Bar
     blockButton = str(os.environ.get('BLOCK_BUTTON'))
- 
+
+    # load data from file for faster load up
+    oldData = {}
+    if os.path.exists(PATH):
+        with open(PATH, 'r') as inFile:
+            oldData = json.load(inFile)
+            tasks = oldData.get('tasks')
+            tasksWithDate = oldData.get('tasksWithDate')
+            subtasks = oldData.get('subtasks')  
+        if (blockButton == LEFT_MOUSE):
+            DunstifyPrint(tasks, tasksWithDate, subtasks)   
+
+        if (tasksWithDate != []): 
+            I3BarPrint(tasksWithDate[0])    
+        elif (tasks != []):
+            I3BarPrint(tasks[0])
+        else:
+            print("No tasks")
+    
     subtasks = []
     tasksWithDate = []
     tasks = []
-   
+ 
     # Call the Tasks API
     try:
         service = GetService()
@@ -68,34 +87,28 @@ def main():
     
         tasksWithDate.sort(key=lambda x: datetime.strptime(x['due'], '%Y-%m-%dT%H:%M:%S.000Z'))
 
-        # store data to file
-        data = { 'tasks' : tasks, 'tasksWithDate' : tasksWithDate, 'subtasks' : subtasks}
-        with open(PATH, 'w') as outFile:
-            json.dump( data, outFile)
+        newData = { 'tasks' : tasks, 'tasksWithDate' : tasksWithDate, 'subtasks' : subtasks}
+
+        # if downloaded data differ    
+        if oldData != newData:
+            if (tasksWithDate != []): 
+                I3BarPrint(tasksWithDate[0])    
+            elif (tasks != []):
+                I3BarPrint(tasks[0])
+            else:
+                print("No tasks")
+
+            if blockButton == LEFT_MOUSE:
+                DunstifyPrint(tasks, tasksWithDate, subtasks)   
+
+            # store data to file
+            with open(PATH, 'w+') as outFile:
+                json.dump( newData, outFile)
 
     except Exception:
-        # load data from file
-        
-        if os.path.exists(PATH):
-            with open(PATH, 'r') as inFile:
-                data = json.load(inFile)
-                tasks = data.get('tasks')
-                tasksWithDate = data.get('tasksWithDate')
-                subtasks = data.get('subtasks')
-        else:
+        if not os.path.exists(PATH):
             print("No connection")
             exit()
-
-    if (tasksWithDate != []): 
-        I3BarPrint(tasksWithDate[0])    
-    elif (tasks != []):
-        I3BarPrint(tasks[0])
-    else:
-        print("No tasks")
-
-    if (blockButton == LEFT_MOUSE):
-        DunstifyPrint(tasks, tasksWithDate, subtasks)
-
 
 def GetService():
     creds = None
@@ -134,10 +147,10 @@ def TimeLeft(dueDate, offset = False):
         out += u"\u2000"
     return out
  
-
 def I3BarPrint(task):
     date = datetime.strptime(task['due'], '%Y-%m-%dT%H:%M:%S.000Z').strftime('%d. %b')
     print("{0}  |  {1}  |  {2}".format(date,  task['title'], TimeLeft(task['due'])))
+    sys.stdout.flush()    
 def DunstifyPrint(tasks, tasksWithDate, subtasks):
     output = StringIO()
     with writer(output, ['', '', '']) as w:
@@ -146,14 +159,19 @@ def DunstifyPrint(tasks, tasksWithDate, subtasks):
             w.writerow((WIDE_WS * 2 + "<b>" + TimeLeft(taskWithDate['due'], True) + "</b>",
                         "|" + WIDE_WS * 2 + "<b>" + taskWithDate['title'] + "</b>", 
                         WIDE_WS * 3))
-        for task in tasks:
-            if not (task in tasksWithDate):
-                w.writerow(('', WIDE_WS * 5 + "<b>" + task['title'] + "</b>", WIDE_WS * 3))
             for subtask in subtasks:
-                if (task['id'] == subtask['parent']):
+                if (taskWithDate['id'] == subtask['parent']):
                     w.writerow(('', 
                                 WIDE_WS * 4 + POINT_CHAR + WIDE_WS * 2 + subtask['title'],
                                 WIDE_WS * 3))
+        for task in tasks:
+            if not (task in tasksWithDate):
+                w.writerow(('', WIDE_WS * 5 + "<b>" + task['title'] + "</b>", WIDE_WS * 3))
+                for subtask in subtasks:
+                    if (task['id'] == subtask['parent']):
+                        w.writerow(('', 
+                                    WIDE_WS * 4 + POINT_CHAR + WIDE_WS * 2 + subtask['title'],
+                                    WIDE_WS * 3))
 
     # run dunstify 
     subprocess.run(["dunstify", 
